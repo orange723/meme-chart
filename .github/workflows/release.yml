@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -57,9 +60,27 @@ jobs:
             tar -czf "release/meme-chart_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz" -C dist meme-chart
           fi
 
-      - name: Upload Release Asset
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: release/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: List Files
+        run: ls -R release
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*
+          files: release/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
