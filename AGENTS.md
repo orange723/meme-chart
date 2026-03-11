@@ -1,27 +1,41 @@
 # meme-chart
 
-## 项目描述
+## 项目概览
 
-以 golang 为编程语言的 CLI 工具，使用 Helius 索引服务获取 Solana 上 meme 币持有分布，并渲染为 HTML（静态或动态）。支持多种图表（饼图/泡泡图/玫瑰图/矩形树图/帕累托）。
+基于 Golang 的 CLI 工具：通过 Helius 索引服务获取 Solana 上 meme 币持有分布与 token 元信息，渲染为静态 HTML 或启动动态服务。
 
-## 项目实现
+## 目录结构
 
-- cli 项目（golang + cobra/viper）
-- 通过 Helius 索引 API 获取：
-  - token 元信息（名称/符号/图片/总量）
-  - 持有人分布
-- 输出静态 HTML 或启动动态服务
+- `main.go`：程序入口
+- `cmd/`：CLI 命令（cobra）
+- `internal/solana/`：Helius API 调用与持有人数据处理
+- `internal/render/`：静态 HTML 生成
+- `internal/server/`：动态服务
+- `internal/model/`：数据结构定义
 
-## 工具
+## 依赖与工具
 
-可使用以下包（已使用）：
+已使用依赖（保持列表真实、精简）：
 
-- https://github.com/go-echarts/go-echarts/tree/master
-- https://github.com/imroc/req
-- https://github.com/spf13/viper
-- https://github.com/spf13/cobra
-- https://github.com/tidwall/gjson
+- `github.com/spf13/cobra`
+- `github.com/spf13/viper`
+- `github.com/tidwall/gjson`
 
-## 协作偏好
+## 开发命令
 
-- 每段代码，在上面写上中文注释，便于查看
+- 运行静态渲染：`go run . render --mint <Mint地址> --api-key <HeliusApiKey> --top 10 --others --chart bubble`
+- 运行动态服务：`go run . serve --mint <Mint地址> --api-key <HeliusApiKey> --top 10 --others --chart bubble`
+- 格式化：`go fmt ./...`
+- 静态检查：`go vet ./...`
+- 测试：`go test ./...`
+
+## 代码约定
+
+- 每段代码，在上面写上中文注释，便于查看。
+- 保持输出可预测：HTML 生成与服务响应应避免隐藏副作用。
+- 新增依赖需同步更新 `go.mod` 与 `go.sum`。
+
+## 外部服务与配置
+
+- Helius API Key 必填：优先使用命令行参数 `--api-key`，也可用环境变量 `MEMECHART_API_KEY`。
+- 访问网络仅用于调用 Helius API。
