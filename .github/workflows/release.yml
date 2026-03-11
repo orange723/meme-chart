@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -45,6 +48,8 @@ jobs:
 
       - name: Package
         run: |
+          sudo apt-get update -y
+          sudo apt-get install -y zip
           mkdir -p release
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -j "release/meme-chart_${{ matrix.goos }}_${{ matrix.goarch }}.zip" dist/meme-chart.exe
