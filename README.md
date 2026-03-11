@@ -2,6 +2,8 @@
 
 Solana meme 币持有分布可视化 CLI。基于 Helius 索引服务获取持有人分布与 token 元信息，生成静态 HTML 或启动动态服务。
 
+> 本项目完全由 OpenAI 的 AI（Codex）编写与整理。
+
 ## 功能
 
 - Helius 索引数据：token 名称/符号/图片/总量
