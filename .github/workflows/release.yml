@@ -54,6 +54,12 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y zip
           mkdir -p release
+          # 复制未压缩二进制
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cp dist/meme-chart.exe "release/meme-chart_${{ matrix.goos }}_${{ matrix.goarch }}.exe"
+          else
+            cp dist/meme-chart "release/meme-chart_${{ matrix.goos }}_${{ matrix.goarch }}"
+          fi
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -j "release/meme-chart_${{ matrix.goos }}_${{ matrix.goarch }}.zip" dist/meme-chart.exe
           else
