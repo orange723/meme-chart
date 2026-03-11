@@ -1,0 +1,60 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+          BIN_NAME=meme-chart
+          if [ "$GOOS" = "windows" ]; then
+            BIN_NAME=meme-chart.exe
+          fi
+          go build -trimpath -ldflags "-s -w" -o "dist/${BIN_NAME}" .
+
+      - name: Package
+        run: |
+          mkdir -p release
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -j "release/meme-chart_${{ matrix.goos }}_${{ matrix.goarch }}.zip" dist/meme-chart.exe
+          else
+            tar -czf "release/meme-chart_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz" -C dist meme-chart
+          fi
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

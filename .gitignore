@@ -1,0 +1,25 @@
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Go build
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Logs
+*.log
+
+# Generated HTML
+*.html
+
+# Local env
+.env
