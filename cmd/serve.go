@@ -44,6 +44,10 @@ func init() {
 	serveCmd.Flags().Int("interval", 30, "动态刷新间隔(秒)")
 
 	// 绑定viper
-	_ = viper.BindPFlag("addr", serveCmd.Flags().Lookup("addr"))
-	_ = viper.BindPFlag("interval", serveCmd.Flags().Lookup("interval"))
+	if err := viper.BindPFlag("addr", serveCmd.Flags().Lookup("addr")); err != nil {
+		fmt.Printf("警告: 绑定 addr 参数失败: %v\n", err)
+	}
+	if err := viper.BindPFlag("interval", serveCmd.Flags().Lookup("interval")); err != nil {
+		fmt.Printf("警告: 绑定 interval 参数失败: %v\n", err)
+	}
 }

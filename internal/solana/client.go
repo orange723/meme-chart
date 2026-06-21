@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -17,7 +18,7 @@ import (
 // RPC请求结构体
 type rpcRequest struct {
 	Jsonrpc string      `json:"jsonrpc"`
-	ID      int         `json:"id"`
+	ID      int64       `json:"id"`
 	Method  string      `json:"method"`
 	Params  interface{} `json:"params,omitempty"`
 }
@@ -26,6 +27,7 @@ type rpcRequest struct {
 type RPCClient struct {
 	URL    string
 	Client *http.Client
+	reqID  atomic.Int64 // 自增请求ID
 }
 
 // NewRPCClient 创建RPC客户端(Helius)
@@ -70,8 +72,13 @@ func buildHeliusURL(endpoint, apiKey string) (string, error) {
 
 // Call 发送RPC请求并返回gjson结果
 func (c *RPCClient) Call(ctx context.Context, method string, params interface{}) (gjson.Result, error) {
-	// 组装请求体
-	payload := rpcRequest{Jsonrpc: "2.0", ID: 1, Method: method, Params: params}
+	// 组装请求体（使用原子自增ID）
+	payload := rpcRequest{
+		Jsonrpc: "2.0",
+		ID:      c.reqID.Add(1),
+		Method:  method,
+		Params:  params,
+	}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return gjson.Result{}, err

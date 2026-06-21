@@ -4,10 +4,21 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+// 支持的图表类型
+var validChartModes = map[string]bool{
+	"pie":     true,
+	"bubble":  true,
+	"donut":   true,
+	"rose":    true,
+	"treemap": true,
+	"pareto":  true,
+}
 
 // 根命令对象
 var rootCmd = &cobra.Command{
@@ -23,6 +34,21 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// validateChartMode 校验图表类型
+func validateChartMode(mode string) error {
+	if mode == "" {
+		return nil // 允许为空，默认使用 pie
+	}
+	if !validChartModes[mode] {
+		keys := make([]string, 0, len(validChartModes))
+		for k := range validChartModes {
+			keys = append(keys, k)
+		}
+		return fmt.Errorf("不支持的图表类型: %q，可选: %s", mode, strings.Join(keys, "/"))
+	}
+	return nil
 }
 
 // 初始化命令
@@ -41,15 +67,26 @@ func init() {
 	rootCmd.PersistentFlags().String("chart", "pie", "图表类型(pie/bubble/donut/rose/treemap/pareto)")
 
 	// 绑定viper
-	_ = viper.BindPFlag("mint", rootCmd.PersistentFlags().Lookup("mint"))
-	_ = viper.BindPFlag("endpoint", rootCmd.PersistentFlags().Lookup("endpoint"))
-	_ = viper.BindPFlag("api_key", rootCmd.PersistentFlags().Lookup("api-key"))
-	_ = viper.BindPFlag("top", rootCmd.PersistentFlags().Lookup("top"))
-	_ = viper.BindPFlag("timeout", rootCmd.PersistentFlags().Lookup("timeout"))
-	_ = viper.BindPFlag("others", rootCmd.PersistentFlags().Lookup("others"))
-	_ = viper.BindPFlag("chart", rootCmd.PersistentFlags().Lookup("chart"))
+	bindFlags(map[string]string{
+		"mint":     "mint",
+		"endpoint": "endpoint",
+		"api_key":  "api-key",
+		"top":      "top",
+		"timeout":  "timeout",
+		"others":   "others",
+		"chart":    "chart",
+	})
 
 	// 注册子命令
 	rootCmd.AddCommand(renderCmd)
 	rootCmd.AddCommand(serveCmd)
+}
+
+// bindFlags 绑定flag到viper，错误时输出警告
+func bindFlags(pairs map[string]string) {
+	for viperKey, flagName := range pairs {
+		if err := viper.BindPFlag(viperKey, rootCmd.PersistentFlags().Lookup(flagName)); err != nil {
+			fmt.Printf("警告: 绑定参数 %s 失败: %v\n", flagName, err)
+		}
+	}
 }

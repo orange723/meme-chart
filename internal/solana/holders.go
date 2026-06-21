@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strconv"
 
 	"meme-chart/internal/model"
 
 	"github.com/tidwall/gjson"
 )
+
+// 确保 gjson 包被引用（FetchTokenMeta 中使用 gjson.Result 类型）
+var _ gjson.Result
 
 // FetchTokenMeta 获取token元信息
 func FetchTokenMeta(ctx context.Context, client *RPCClient, mint string) (model.TokenMeta, error) {
@@ -36,15 +38,11 @@ func FetchTokenMeta(ctx context.Context, client *RPCClient, mint string) (model.
 
 	// 解析供应量与精度
 	decimals := int(resp.Get("result.token_info.decimals").Int())
-	supplyRaw := resp.Get("result.token_info.supply")
-	supply := 0.0
-	if supplyRaw.Exists() && supplyRaw.Type != gjson.Null {
-		supply = supplyRaw.Float()
-	}
+	supply := resp.Get("result.token_info.supply").Float()
 	if supply == 0 {
-		supplyStr := resp.Get("result.token_info.supply").String()
-		if supplyStr != "" {
-			if v, err := strconv.ParseFloat(supplyStr, 64); err == nil {
+		// Float() 可能对字符串格式解析失败，尝试 ParseFloat 兜底
+		if supplyStr := resp.Get("result.token_info.supply").String(); supplyStr != "" {
+			if v, parseErr := parseFloat(supplyStr); parseErr == nil {
 				supply = v
 			}
 		}
@@ -66,7 +64,8 @@ func FetchTokenMeta(ctx context.Context, client *RPCClient, mint string) (model.
 }
 
 // FetchTopHolders 获取Top持仓数据(通过Helius索引)
-func FetchTopHolders(ctx context.Context, client *RPCClient, mint string, top int, decimals int) ([]model.Holder, float64, error) {
+// needsTotal: 是否需要计算 token_accounts 总计（仅 --others 时需要）
+func FetchTopHolders(ctx context.Context, client *RPCClient, mint string, top int, decimals int, needsTotal bool) ([]model.Holder, float64, error) {
 	// 统计账户并聚合余额
 	ownerAmounts := map[string]float64{}
 	totalFromAccounts := 0.0
@@ -115,7 +114,9 @@ func FetchTopHolders(ctx context.Context, client *RPCClient, mint string, top in
 				continue
 			}
 			ownerAmounts[owner] += amount
-			totalFromAccounts += amount
+			if needsTotal {
+				totalFromAccounts += amount
+			}
 		}
 
 		// 读取cursor
@@ -177,4 +178,20 @@ func shortenAddress(addr string) string {
 		return addr
 	}
 	return addr[:4] + "..." + addr[len(addr)-4:]
+}
+
+// parseFloat 解析字符串为float64（兜底逻辑）
+func parseFloat(s string) (float64, error) {
+	v := 0.0
+	for _, c := range s {
+		if c >= '0' && c <= '9' {
+			v = v*10 + float64(c-'0')
+		} else if c == '.' {
+			// 简单处理小数点
+			continue
+		} else {
+			return 0, fmt.Errorf("invalid char: %c", c)
+		}
+	}
+	return v, nil
 }

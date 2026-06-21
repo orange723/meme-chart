@@ -15,6 +15,9 @@ import (
 	"github.com/spf13/viper"
 )
 
+// defaultOutFile 默认输出文件名
+const defaultOutFile = "meme-chart.html"
+
 // 静态渲染命令对象
 var renderCmd = &cobra.Command{
 	Use:   "render",
@@ -34,12 +37,21 @@ var renderCmd = &cobra.Command{
 		if mint == "" {
 			return fmt.Errorf("必须提供 --mint 参数")
 		}
+		if err := validateChartMode(chartMode); err != nil {
+			return err
+		}
 
-		// 获取数据
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		// 确保最小超时
+		if timeoutSec < 5 {
+			timeoutSec = 5
+		}
+		timeout := time.Duration(timeoutSec) * time.Second
+
+		// 获取数据（使用用户指定的超时）
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		client, err := solana.NewRPCClient(endpoint, apiKey, time.Duration(timeoutSec)*time.Second)
+		client, err := solana.NewRPCClient(endpoint, apiKey, timeout)
 		if err != nil {
 			return err
 		}
@@ -47,7 +59,7 @@ var renderCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		holders, totalFromAccounts, err := solana.FetchTopHolders(ctx, client, mint, top, meta.Decimals)
+		holders, totalFromAccounts, err := solana.FetchTopHolders(ctx, client, mint, top, meta.Decimals, others)
 		if err != nil {
 			return err
 		}
@@ -56,7 +68,7 @@ var renderCmd = &cobra.Command{
 		}
 
 		// 生成默认输出文件名
-		if out == "meme-chart.html" {
+		if out == defaultOutFile {
 			out = buildOutputFilename(meta)
 		}
 
@@ -73,10 +85,12 @@ var renderCmd = &cobra.Command{
 // 初始化静态渲染命令
 func init() {
 	// 专属参数
-	renderCmd.Flags().String("out", "meme-chart.html", "输出HTML文件")
+	renderCmd.Flags().String("out", defaultOutFile, "输出HTML文件")
 
 	// 绑定viper
-	_ = viper.BindPFlag("out", renderCmd.Flags().Lookup("out"))
+	if err := viper.BindPFlag("out", renderCmd.Flags().Lookup("out")); err != nil {
+		fmt.Printf("警告: 绑定 out 参数失败: %v\n", err)
+	}
 }
 
 // buildOutputFilename 构建输出文件名
